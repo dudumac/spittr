@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-import java.util.Date;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.Test;
@@ -20,6 +20,7 @@ import spittr.Spittle;
 import spittr.data.SpittleRepository;
 
 public class SpittleControllerTest {
+
 	@Test
 	public void testGetSpittles() throws Exception {
 		List<Spittle> expectedSpittles = createSpittleList(20);
@@ -84,5 +85,7 @@ public class SpittleControllerTest {
 		}
 		return spittles;
 	}
+
+
 
 }
