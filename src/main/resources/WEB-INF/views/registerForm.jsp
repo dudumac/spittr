@@ -10,7 +10,7 @@
 <body>
 	<h1>Register</h1>
 	<!--  commandName must map to object key in the Model -->
-	<sf:form method="POST" commandName="spitter">
+	<sf:form method="POST" commandName="spitter" enctype="multipart/form-data">
 		<!-- Alternate approach for displaying errors
 		<sf:errors path="*" element="div" cssClass="errors" /> 
 	-->
@@ -28,7 +28,9 @@ Username: <sf:input path="username" />
 		<br />
 Password: <sf:password path="password" />
 		<br />
-		<input type="submit" value="Register" />
+Profile Picture: <sf:input type="file" path="profilePicture"
+			accept="image/jpeg,image/png,image/gif" />
+		<br />
 	</sf:form>
 	<!-- 
 	<form method="POST">
