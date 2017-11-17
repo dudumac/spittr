@@ -26,6 +26,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		resolver.setExposeContextBeansAsAttributes(true);
 		return resolver;
 	}
+	
 /*
  * Alternate ViewResolver configuration to use JstlViews	
 	@Bean
@@ -38,7 +39,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 */
 	
-	@Bean(name="multipartResolver")
+	@Bean
 	public MultipartResolver multipartResolver() throws IOException {
 		return new StandardServletMultipartResolver();
 	}

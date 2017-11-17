@@ -13,24 +13,42 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-import java.io.IOException;
-
+import org.junit.Before;
 import org.junit.Test;
-import org.springframework.beans.factory.annotation.Configurable;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.multipart.MultipartResolver;
-import org.springframework.web.multipart.support.StandardServletMultipartResolver;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import spittr.Spitter;
+import spittr.config.TestConfig;
+import spittr.config.WebConfig;
 import spittr.data.SpitterRepository;
 
-@Configuration
+@WebAppConfiguration
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = { WebConfig.class, TestConfig.class })
 public class SpitterControllerTest {
+
+	@Autowired
+	private WebApplicationContext webApplicationContext;
+
+	@Autowired
+	SpitterRepository mockSpitterRpositry;
+
+	private MockMvc mockMvc;
+
+	@Before
+	public void setUp() {
+		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+				.build();
+	}
 
 	@Test
 	public void testGetRegisterForm() throws Exception {
@@ -39,20 +57,19 @@ public class SpitterControllerTest {
 
 		MockMvc mockMvc = standaloneSetup(controller).build();
 
-		mockMvc.perform(get("/spitter/register")).andExpect(view().name("registerForm"));
+		mockMvc.perform(get("/spitter/register"))
+				.andExpect(view().name("registerForm"));
 
 	}
 
 	@Test
 	public void shouldProcessRegistration() throws Exception {
-		SpitterRepository mockRepository = mock(SpitterRepository.class);
 		Spitter unsaved = new Spitter("jbauer", "24hours", "Jack", "Bauer");
 		Spitter saved = new Spitter(24L, "jbauer", "24hours", "Jack", "Bauer");
+		when(mockSpitterRpositry.save(unsaved)).thenReturn(saved);
 
-		when(mockRepository.save(unsaved)).thenReturn(saved);
-
-		SpitterController controller = new SpitterController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller).build();
+		// SpitterController controller = new SpitterController(mockRepository);
+		// MockMvc mockMvc = standaloneSetup(controller).build();
 		// mockMvc.perform(post("/spitter/register")
 		// .param("username", "jbauer")
 		// .param("password", "24hours")
@@ -60,26 +77,31 @@ public class SpitterControllerTest {
 		// .param("lastName", "Bauer"))
 		// .andExpect(redirectedUrl("/spitter/jbauer"));
 
-		MockMultipartFile jpgUploadMock = new MockMultipartFile("name", "".getBytes());
-		mockMvc.perform(MockMvcRequestBuilders.fileUpload("")
+		MockMultipartFile jpgUploadMock = new MockMultipartFile("profilePicture", "mytestfile.txt", "txt/plain",
+				"".getBytes());
+		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")
 				.file(jpgUploadMock)
 				.param("username", "jbauer")
 				.param("password", "24hours")
 				.param("firstName", "Jack")
 				.param("lastName", "Bauer"))
 				.andExpect(redirectedUrl("/spitter/jbauer"));
-		
-		verify(mockRepository, atLeastOnce()).save(unsaved);
+
+		verify(mockSpitterRpositry, atLeastOnce()).save(unsaved);
 	}
 
 	@Test
 	public void shouldReturnRegistrationFormWhenInvalidInputReceived() throws Exception {
-		SpitterRepository mockRepository = mock(SpitterRepository.class);
-		SpitterController controller = new SpitterController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller).build();
-		mockMvc.perform(post("/spitter/register").param("username", "j").param("password", "24hours")
-				.param("firstName", "J").param("lastName", "Bauer")).andExpect(view().name("registerForm"));
-		verify(mockRepository, never()).save(any());
+		MockMultipartFile jpgUploadMock = new MockMultipartFile("profilePicture", "mytestfile.txt", "txt/plain",
+				"".getBytes());
+		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")
+				.file(jpgUploadMock)
+				.param("username", "j")
+				.param("password", "24hours")
+				.param("firstName", "J")
+				.param("lastName", "Bauer"))
+				.andExpect(view().name("registerForm"));
+		verify(mockSpitterRpositry, never()).save(any());
 	}
 
 	@Test
@@ -91,12 +113,9 @@ public class SpitterControllerTest {
 
 		SpitterController controller = new SpitterController(mockRepository);
 		MockMvc mockMvc = standaloneSetup(controller).build();
-		mockMvc.perform(post("/spitter/jbauer")).andExpect(view().name("profile"))
-				.andExpect(model().attributeExists("spitter")).andExpect(model().attribute("spitter", expectedSpitter));
-	}
-	
-	@Bean(name="multipartResolver")
-	public MultipartResolver multipartResolver() throws IOException {
-		return new StandardServletMultipartResolver();
+		mockMvc.perform(post("/spitter/jbauer"))
+				.andExpect(view().name("profile"))
+				.andExpect(model().attributeExists("spitter"))
+				.andExpect(model().attribute("spitter", expectedSpitter));
 	}
 }

@@ -45,7 +45,7 @@ public class SpitterController {
 		}
 
 		profilePicture.transferTo(
-				new File("/data/spittr/" + profilePicture.getOriginalFilename()));
+				new File("/tmp/" + profilePicture.getOriginalFilename()));
 		
 		spitterRepository.save(spitter);
 		return "redirect:/spitter/" + spitter.getUsername();
