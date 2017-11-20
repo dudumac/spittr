@@ -68,15 +68,6 @@ public class SpitterControllerTest {
 		Spitter saved = new Spitter(24L, "jbauer", "24hours", "Jack", "Bauer");
 		when(mockSpitterRpositry.save(unsaved)).thenReturn(saved);
 
-		// SpitterController controller = new SpitterController(mockRepository);
-		// MockMvc mockMvc = standaloneSetup(controller).build();
-		// mockMvc.perform(post("/spitter/register")
-		// .param("username", "jbauer")
-		// .param("password", "24hours")
-		// .param("firstName", "Jack")
-		// .param("lastName", "Bauer"))
-		// .andExpect(redirectedUrl("/spitter/jbauer"));
-
 		MockMultipartFile jpgUploadMock = new MockMultipartFile("profilePicture", "mytestfile.txt", "txt/plain",
 				"".getBytes());
 		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")

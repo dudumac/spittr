@@ -4,7 +4,9 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
@@ -13,11 +15,14 @@ import java.util.Date;
 import java.util.List;
 
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.view.InternalResourceView;
 
+import spittr.Spitter;
 import spittr.Spittle;
 import spittr.data.SpittleRepository;
+import spittr.exception.DuplicateSpittleException;
 
 public class SpittleControllerTest {
 
@@ -76,6 +81,30 @@ public class SpittleControllerTest {
 				.andExpect(view().name("spittle"))
 				.andExpect(model().attributeExists("spittle"))
 				.andExpect(model().attribute("spittle", expectedSpittle));
+	}
+
+	@Test
+	public void testSpittleNotFoundErrorStatusCodeReturned() throws Exception {
+		SpittleRepository mockRepository = mock(SpittleRepository.class);
+		when(mockRepository.findOne(12345)).thenReturn(null);
+		
+		SpittleController controller = new SpittleController(mockRepository);
+		MockMvc mockMvc = standaloneSetup(controller).build();
+		mockMvc.perform(get("/spittles/12345"))
+				.andExpect(status().isNotFound());
+				
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testPutDuplicateSpittleReturnsDuplicateErrorView() throws Exception {
+		SpittleRepository mockRepository = mock(SpittleRepository.class);
+		when(mockRepository.save(Matchers.any())).thenThrow(DuplicateSpittleException.class);
+		
+		SpittleController controller = new SpittleController(mockRepository);
+		MockMvc mockMvc = standaloneSetup(controller).build();
+		mockMvc.perform(post("/spittles/1"))
+				.andExpect(view().name("error/duplicate"));
 	}
 
 	private List<Spittle> createSpittleList(int count) {
