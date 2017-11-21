@@ -1,4 +1,5 @@
 package spittr.web;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.*;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -47,7 +48,7 @@ public class SpitterControllerTest {
 	@Before
 	public void setUp() {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-				.build();
+				.apply(springSecurity()).build();
 	}
 
 	@Test
