@@ -15,17 +15,29 @@ import java.util.Date;
 import java.util.List;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Matchers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.view.InternalResourceView;
 
-import spittr.Spitter;
 import spittr.Spittle;
+import spittr.config.TestConfig;
+import spittr.config.WebConfig;
 import spittr.data.SpittleRepository;
 import spittr.exception.DuplicateSpittleException;
 
+@WebAppConfiguration
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = { WebConfig.class, TestConfig.class })
 public class SpittleControllerTest {
 
+	@Autowired
+	SpittrWebAppExceptionHandler spittrWebAppExceptionHandler;
+	
 	@Test
 	public void testGetSpittles() throws Exception {
 		List<Spittle> expectedSpittles = createSpittleList(20);
@@ -102,7 +114,10 @@ public class SpittleControllerTest {
 		when(mockRepository.save(Matchers.any())).thenThrow(DuplicateSpittleException.class);
 		
 		SpittleController controller = new SpittleController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller).build();
+		MockMvc mockMvc = standaloneSetup(controller)
+				.setControllerAdvice(spittrWebAppExceptionHandler)
+				.build();
+		
 		mockMvc.perform(post("/spittles/1"))
 				.andExpect(view().name("error/duplicate"));
 	}

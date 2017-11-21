@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 import spittr.data.SpitterRepository;
 import spittr.data.SpittleRepository;
+import spittr.web.SpittrWebAppExceptionHandler;
 
 @Configuration
 public class TestConfig {
@@ -21,5 +22,10 @@ public class TestConfig {
 	@Bean
 	public SpittleRepository spittleRpository() throws IOException {
 		return mock(SpittleRepository.class);
+	}
+	
+	@Bean 
+	public SpittrWebAppExceptionHandler spittrWebAppExceptionHandler() {
+		return new SpittrWebAppExceptionHandler();
 	}
 }

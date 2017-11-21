@@ -73,8 +73,8 @@ public class SpittleController {
 	}
 	
 
-	@ExceptionHandler(DuplicateSpittleException.class)
-	public String handleDuplicateSpittle() {
-		return "error/duplicate";
-	}
+//	@ExceptionHandler(DuplicateSpittleException.class)
+//	public String handleDuplicateSpittle() {
+//		return "error/duplicate";
+//	}
 }
