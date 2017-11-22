@@ -3,6 +3,8 @@ package spittr.web;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -13,6 +15,8 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import javax.servlet.Filter;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.view.InternalResourceView;
 
 import spittr.Spittle;
+import spittr.config.SecurityConfig;
 import spittr.config.TestConfig;
 import spittr.config.WebConfig;
 import spittr.data.SpittleRepository;
@@ -32,8 +37,11 @@ import spittr.exception.DuplicateSpittleException;
 
 @WebAppConfiguration
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = { WebConfig.class, TestConfig.class })
+@ContextConfiguration(classes = { WebConfig.class, SecurityConfig.class, TestConfig.class })
 public class SpittleControllerTest {
+
+	@Autowired
+	private Filter springSecurityFilterChain;
 
 	@Autowired
 	SpittrWebAppExceptionHandler spittrWebAppExceptionHandler;
@@ -49,9 +57,10 @@ public class SpittleControllerTest {
 
 		MockMvc mockMvc = standaloneSetup(controller)
 				.setSingleView(new InternalResourceView("/WEB-INF/views/spittles.jsp"))
+				.addFilters(springSecurityFilterChain)
 				.build();
 
-		mockMvc.perform(get("/spittles"))
+		mockMvc.perform(get("/spittles").with(user("username").password("password")))
 				.andExpect(view().name("spittles"))
 				.andExpect(model().attributeExists("spittleList"))
 				.andExpect(model().attribute("spittleList", hasItems(expectedSpittles.toArray())));

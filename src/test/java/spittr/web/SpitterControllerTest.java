@@ -1,18 +1,18 @@
 package spittr.web;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.*;
+//import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.*;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -28,14 +28,18 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import spittr.Spitter;
+import spittr.config.SecurityConfig;
 import spittr.config.TestConfig;
 import spittr.config.WebConfig;
 import spittr.data.SpitterRepository;
 
 @WebAppConfiguration
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = { WebConfig.class, TestConfig.class })
+@ContextConfiguration(classes = { WebConfig.class, SecurityConfig.class, TestConfig.class })
 public class SpitterControllerTest {
+
+//	@Autowired
+//	private Filter springSecurityFilterChain;
 
 	@Autowired
 	private WebApplicationContext webApplicationContext;
@@ -49,16 +53,17 @@ public class SpitterControllerTest {
 	public void setUp() {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
 				.apply(springSecurity()).build();
+
+//		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+//				.addFilters(springSecurityFilterChain)
+//				.build();
+
 	}
 
 	@Test
 	public void testGetRegisterForm() throws Exception {
-		SpitterRepository mockRepository = mock(SpitterRepository.class);
-		SpitterController controller = new SpitterController(mockRepository);
-
-		MockMvc mockMvc = standaloneSetup(controller).build();
-
-		mockMvc.perform(get("/spitter/register"))
+		mockMvc.perform(get("/spitter/register")
+				.with(user("admin").password("password")))
 				.andExpect(view().name("registerForm"));
 
 	}
@@ -73,6 +78,7 @@ public class SpitterControllerTest {
 				"".getBytes());
 		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")
 				.file(jpgUploadMock)
+				.with(user("admin").password("password"))
 				.param("username", "jbauer")
 				.param("password", "24hours")
 				.param("firstName", "Jack")
@@ -86,8 +92,10 @@ public class SpitterControllerTest {
 	public void shouldReturnRegistrationFormWhenInvalidInputReceived() throws Exception {
 		MockMultipartFile jpgUploadMock = new MockMultipartFile("profilePicture", "mytestfile.txt", "txt/plain",
 				"".getBytes());
+		
 		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")
 				.file(jpgUploadMock)
+				.with(user("user").password("password"))				
 				.param("username", "j")
 				.param("password", "24hours")
 				.param("firstName", "J")
@@ -99,13 +107,11 @@ public class SpitterControllerTest {
 	@Test
 	public void shouldShowProfile() throws Exception {
 		Spitter expectedSpitter = new Spitter(24L, "jbauer", "24hours", "Jack", "Bauer");
+		
+		when(mockSpitterRpositry.findByUsername("jbauer")).thenReturn(expectedSpitter);
 
-		SpitterRepository mockRepository = mock(SpitterRepository.class);
-		when(mockRepository.findByUsername("jbauer")).thenReturn(expectedSpitter);
-
-		SpitterController controller = new SpitterController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller).build();
-		mockMvc.perform(post("/spitter/jbauer"))
+		mockMvc.perform(post("/spitter/jbauer")
+				.with(user("admin").password("password")))
 				.andExpect(view().name("profile"))
 				.andExpect(model().attributeExists("spitter"))
 				.andExpect(model().attribute("spitter", expectedSpitter));
