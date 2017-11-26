@@ -1,11 +1,11 @@
 package spittr.web;
-//import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.*;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -38,9 +39,6 @@ import spittr.data.SpitterRepository;
 @ContextConfiguration(classes = { WebConfig.class, SecurityConfig.class, TestConfig.class })
 public class SpitterControllerTest {
 
-//	@Autowired
-//	private Filter springSecurityFilterChain;
-
 	@Autowired
 	private WebApplicationContext webApplicationContext;
 
@@ -52,20 +50,14 @@ public class SpitterControllerTest {
 	@Before
 	public void setUp() {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-				.apply(springSecurity()).build();
-
-//		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-//				.addFilters(springSecurityFilterChain)
-//				.build();
-
+				.apply(springSecurity())
+				.build();
 	}
 
 	@Test
 	public void testGetRegisterForm() throws Exception {
-		mockMvc.perform(get("/spitter/register")
-				.with(user("admin").password("password")))
+		mockMvc.perform(get("/spitter/register"))
 				.andExpect(view().name("registerForm"));
-
 	}
 
 	@Test
@@ -78,7 +70,6 @@ public class SpitterControllerTest {
 				"".getBytes());
 		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")
 				.file(jpgUploadMock)
-				.with(user("admin").password("password"))
 				.param("username", "jbauer")
 				.param("password", "24hours")
 				.param("firstName", "Jack")
@@ -95,7 +86,6 @@ public class SpitterControllerTest {
 		
 		mockMvc.perform(MockMvcRequestBuilders.fileUpload("/spitter/register")
 				.file(jpgUploadMock)
-				.with(user("user").password("password"))				
 				.param("username", "j")
 				.param("password", "24hours")
 				.param("firstName", "J")
@@ -110,10 +100,33 @@ public class SpitterControllerTest {
 		
 		when(mockSpitterRpositry.findByUsername("jbauer")).thenReturn(expectedSpitter);
 
-		mockMvc.perform(post("/spitter/jbauer")
+		mockMvc.perform(post("/spitter/jbauer"))
+				.andExpect(view().name("profile"))
+				.andExpect(model().attributeExists("spitter"))
+				.andExpect(model().attribute("spitter", expectedSpitter));
+	}
+	
+	@Test
+	public void shouldShowProfileForCurrentUser() throws Exception {
+		Spitter expectedSpitter = new Spitter(24L, "admin", "password", "Boss", "Man");
+		
+		when(mockSpitterRpositry.findByUsername("admin")).thenReturn(expectedSpitter);
+
+		mockMvc.perform(post("/spitter/me")
 				.with(user("admin").password("password")))
 				.andExpect(view().name("profile"))
 				.andExpect(model().attributeExists("spitter"))
 				.andExpect(model().attribute("spitter", expectedSpitter));
+	}
+	
+	@Test
+	public void noSelfProfileDisplayedWithoutCredentialsProfileForCurrentUser() throws Exception {
+		Spitter expectedSpitter = new Spitter(24L, "admin", "password", "Boss", "Man");
+		
+		when(mockSpitterRpositry.findByUsername("admin")).thenReturn(expectedSpitter);
+
+		mockMvc.perform(post("/spitter/me")
+				.with(httpBasic("baduser","password")))
+				.andExpect(status().isUnauthorized());
 	}
 }

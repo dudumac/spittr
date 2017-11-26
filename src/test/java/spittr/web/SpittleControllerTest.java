@@ -4,7 +4,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -18,10 +18,13 @@ import java.util.List;
 
 import javax.servlet.Filter;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Matchers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.MethodMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
@@ -38,6 +41,7 @@ import spittr.exception.DuplicateSpittleException;
 @WebAppConfiguration
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = { WebConfig.class, SecurityConfig.class, TestConfig.class })
+@DirtiesContext(methodMode=MethodMode.AFTER_METHOD)
 public class SpittleControllerTest {
 
 	@Autowired
@@ -45,22 +49,29 @@ public class SpittleControllerTest {
 
 	@Autowired
 	SpittrWebAppExceptionHandler spittrWebAppExceptionHandler;
+
+	SpittleRepository mockRepository;
+	
+	MockMvc mockMvc;
+	
+	@Before
+	public void setUp() {
+		mockRepository = mock(SpittleRepository.class);
+		SpittleController spittleController = new SpittleController(mockRepository);
+		
+		mockMvc = standaloneSetup(spittleController)
+				.setSingleView(new InternalResourceView("/WEB-INF/views/spittles.jsp"))
+				.addFilters(springSecurityFilterChain)
+				.setControllerAdvice(spittrWebAppExceptionHandler)
+				.build();
+	}
 	
 	@Test
 	public void testGetSpittles() throws Exception {
 		List<Spittle> expectedSpittles = createSpittleList(20);
 
-		SpittleRepository mockRepository = mock(SpittleRepository.class);
 		when(mockRepository.findSpittles(Long.MAX_VALUE, 20)).thenReturn(expectedSpittles);
-
-		SpittleController controller = new SpittleController(mockRepository);
-
-		MockMvc mockMvc = standaloneSetup(controller)
-				.setSingleView(new InternalResourceView("/WEB-INF/views/spittles.jsp"))
-				.addFilters(springSecurityFilterChain)
-				.build();
-
-		mockMvc.perform(get("/spittles").with(user("username").password("password")))
+		mockMvc.perform(get("/spittles"))
 				.andExpect(view().name("spittles"))
 				.andExpect(model().attributeExists("spittleList"))
 				.andExpect(model().attribute("spittleList", hasItems(expectedSpittles.toArray())));
@@ -70,14 +81,8 @@ public class SpittleControllerTest {
 	@Test
 	public void shouldShowPagedSpittles() throws Exception {
 		List<Spittle> expectedSpittles = createSpittleList(50);
-
-		SpittleRepository mockRepository = mock(SpittleRepository.class);
 		when(mockRepository.findSpittles(238900, 50)).thenReturn(expectedSpittles);
 
-		SpittleController controller = new SpittleController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller)
-				.setSingleView(new InternalResourceView("/WEB-INF/views/spittles.jsp"))
-				.build();
 		mockMvc.perform(get("/spittles?max=238900&count=50"))
 				.andExpect(view().name("spittles"))
 				.andExpect(model().attributeExists("spittleList"))
@@ -92,12 +97,8 @@ public class SpittleControllerTest {
 	@Test
 	public void testSpittle() throws Exception {
 		Spittle expectedSpittle = new Spittle("Hello", new Date());
-		
-		SpittleRepository mockRepository = mock(SpittleRepository.class);
 		when(mockRepository.findOne(12345)).thenReturn(expectedSpittle);
 		
-		SpittleController controller = new SpittleController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller).build();
 		mockMvc.perform(get("/spittles/12345"))
 				.andExpect(view().name("spittle"))
 				.andExpect(model().attributeExists("spittle"))
@@ -106,11 +107,8 @@ public class SpittleControllerTest {
 
 	@Test
 	public void testSpittleNotFoundErrorStatusCodeReturned() throws Exception {
-		SpittleRepository mockRepository = mock(SpittleRepository.class);
 		when(mockRepository.findOne(12345)).thenReturn(null);
-		
-		SpittleController controller = new SpittleController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller).build();
+
 		mockMvc.perform(get("/spittles/12345"))
 				.andExpect(status().isNotFound());
 				
@@ -118,16 +116,28 @@ public class SpittleControllerTest {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void testPutDuplicateSpittleReturnsDuplicateErrorView() throws Exception {
-		SpittleRepository mockRepository = mock(SpittleRepository.class);
+	public void testPostSpittleReturnsSpittleView() throws Exception {
+		mockMvc.perform(post("/spittles/1")
+				.with(user("admin").password("password")))
+				.andExpect(status().is2xxSuccessful())
+				.andExpect(view().name("redirect:/spittles"));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testPostWithInvalidCredentialsFails() throws Exception {
+		mockMvc.perform(post("/spittles/1").with(httpBasic("baduser","password")))
+				.andExpect(status().is4xxClientError());
+//				.andExpect(view().name("redirect:/spittles"));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testPostDuplicateSpittleReturnsDuplicateErrorView() throws Exception {
 		when(mockRepository.save(Matchers.any())).thenThrow(DuplicateSpittleException.class);
 		
-		SpittleController controller = new SpittleController(mockRepository);
-		MockMvc mockMvc = standaloneSetup(controller)
-				.setControllerAdvice(spittrWebAppExceptionHandler)
-				.build();
-		
-		mockMvc.perform(post("/spittles/1"))
+		mockMvc.perform(post("/spittles/1")
+				.with(user("admin").password("password")))
 				.andExpect(view().name("error/duplicate"));
 	}
 

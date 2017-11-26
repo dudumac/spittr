@@ -2,6 +2,7 @@ package spittr.web;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 
 import javax.servlet.http.Part;
 import javax.validation.Valid;
@@ -54,6 +55,14 @@ public class SpitterController {
 	@RequestMapping(value = "/{username}", method = RequestMethod.POST)
 	public String showSpitterProfile(@PathVariable String username, Model model) {
 		Spitter spitter = spitterRepository.findByUsername(username);
+		model.addAttribute(spitter);
+		return "profile";
+	}
+	
+	@RequestMapping(value = "/me", method = RequestMethod.POST)
+	public String showSpitterSelfProfile(Principal principal, Model model) {
+		
+		Spitter spitter = spitterRepository.findByUsername(principal.getName());
 		model.addAttribute(spitter);
 		return "profile";
 	}
