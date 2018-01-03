@@ -1,0 +1,1 @@
+INSERT INTO SPITTER (ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME) VALUES (1, 'defaultUser', 'defaultPassword', '', '');
